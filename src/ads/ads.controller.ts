@@ -9,9 +9,14 @@ export class AdsController {
   constructor(private readonly adsService: AdsService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   async create(@Body() createAdDto: CreateAdDto) {
-    return this.adsService.create(createAdDto);
+    try {
+      return await this.adsService.create(createAdDto);
+    } catch (error) {
+      console.error('Error in AdsController:', error);
+      throw new Error('Failed to create ad');
+    }
   }
 
   @Get()
@@ -27,12 +32,22 @@ export class AdsController {
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   async update(@Param('id') id: number, @Body() updateAdDto: UpdateAdDto) {
-    return this.adsService.update(id, updateAdDto);
+    try {
+      return await this.adsService.update(id, updateAdDto);
+    } catch (error) {
+      console.error('Error in AdsController:', error);
+      throw new Error('Failed to update ad');
+    }
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   async remove(@Param('id') id: number) {
-    return this.adsService.remove(id);
+    try {
+      return await this.adsService.remove(id);
+    } catch (error) {
+      console.error('Error in AdsController:', error);
+      throw new Error('Failed to remove ad');
+    }
   }
 }
