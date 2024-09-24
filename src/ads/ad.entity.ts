@@ -2,25 +2,46 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from 'ty
 import { User } from '../users/user.entity';
 import { Rating } from '../ratings/rating.entity';
 
-@Entity()
+@Entity('ads')
 export class Ad {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
-  title: string;
+  lookingFor: string;
 
-  @Column('text')
-  description: string;
+  @Column()
+  departureCountry: string;
+
+  @Column()
+  departureCity: string;
+
+  @Column()
+  destinationCountry: string;
+
+  @Column()
+  destinationCity: string;
 
   @Column()
   departureDate: Date;
 
-  @Column()
-  destination: string;
+  @Column({ default: false })
+  isAlreadyOnVacation: boolean;
 
   @Column()
-  seatsAvailable: number;
+  daysCount: number;
+
+  @Column({ nullable: true })
+  paymentOption?: string;
+
+  @Column('text')
+  description: string;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  created_at: Date;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
+  updated_at: Date;
 
   @ManyToOne(() => User, (user) => user.ads)
   user: User;
