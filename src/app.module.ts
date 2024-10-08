@@ -9,6 +9,7 @@ import { AppController } from './app.controller';
 import { ProtectedController } from './controllers/protected.controller';
 import { MessagesModule } from './messages/messages.module';
 import { RatingsModule } from './ratings/ratings.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -23,12 +24,17 @@ import { RatingsModule } from './ratings/ratings.module';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true,
       logging: true,
+      // Обработка ошибок
+      extra: {
+        connectionLimit: 10,
+      },
     }),
     AuthModule,
     UsersModule,
     AdsModule,
     MessagesModule,
     RatingsModule,
+    CloudinaryModule,
   ],
   controllers: [AppController, ProtectedController], // Добавь сюда контроллер
   providers: [AppService],

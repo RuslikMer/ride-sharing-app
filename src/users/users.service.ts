@@ -3,12 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { Express } from 'express';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>
+    private usersRepository: Repository<User>,
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   async findAll(): Promise<User[]> {
@@ -49,6 +52,19 @@ export class UsersService {
 
   async update(id: number, updateUserDto: any): Promise<void> {
     await this.usersRepository.update(id, updateUserDto);
+  }
+
+  // Обновление профиля с загрузкой фото
+  async updateProfilePicture(id: number, file: Express.Multer.File): Promise<User> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const uploadResult = await this.cloudinaryService.uploadImage(file.buffer);
+    user.profilePicture = uploadResult.secure_url;
+
+    return this.usersRepository.save(user);
   }
 
   async remove(id: number): Promise<void> {
