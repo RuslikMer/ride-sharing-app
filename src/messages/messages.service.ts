@@ -2,46 +2,70 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Message } from './message.entity';
-import { CreateMessageDto } from './dto/create-message.dto';
-import { UpdateMessageDto } from './dto/update-message.dto';
+import { User } from '../users/user.entity';
+import * as crypto from 'crypto';
+import 'dotenv/config';
 
 @Injectable()
 export class MessagesService {
+  private readonly encryptionKey: string;
+
   constructor(
     @InjectRepository(Message)
-    private readonly messagesRepository: Repository<Message>,
-  ) {}
-
-  // Создание нового сообщения
-  async create(createMessageDto: CreateMessageDto): Promise<Message> {
-    const message = this.messagesRepository.create(createMessageDto);
-    return this.messagesRepository.save(message);
+    private readonly messageRepository: Repository<Message>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {
+    this.encryptionKey = process.env.ENCRYPTION_KEY;
   }
 
-  // Получение сообщения по ID
-  async findOne(id: number): Promise<Message> {
-    const message = await this.messagesRepository.findOne({
-      where: { id },
-      relations: ['sender', 'receiver'], // Загружаем связанные сущности
+  encrypt(text: string): string {
+      const iv = crypto.randomBytes(16);
+      const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(this.encryptionKey, 'hex'), iv);
+      let encrypted = cipher.update(text, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      return iv.toString('hex') + ':' + encrypted; // Вернем IV и зашифрованный текст
+  }
+
+  decrypt(text: string): string {
+      const [iv, encryptedText] = text.split(':');
+      const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(this.encryptionKey, 'hex'), Buffer.from(iv, 'hex'));
+      let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return decrypted;
+  }
+
+  async sendMessage(sender: User, receiver: User, content: string): Promise<Message> {
+    const message = new Message();
+    message.sender = sender;
+    message.receiver = receiver;
+    message.encryptedContent = this.encrypt(content); // шифруем текст сообщения
+    message.sentAt = new Date();
+    
+    return await this.messageRepository.save(message);
+  }
+
+  async getChatHistory(senderId: number, receiverId: number): Promise<any[]> {
+    const messages = await this.messageRepository.find({
+      where: [
+        { sender: { id: senderId }, receiver: { id: receiverId } },
+        { sender: { id: receiverId }, receiver: { id: senderId } },
+      ],
+      order: { sentAt: 'ASC' },
     });
-    if (!message) {
-      throw new NotFoundException(`Message with ID ${id} not found`);
-    }
-    return message;
+  
+    // Расшифруем сообщения перед возвращением
+    return messages.map(message => ({
+      ...message,
+      content: this.decrypt(message.encryptedContent), // расшифруем
+    }));
   }
 
-  // Обновление сообщения по ID
-  async update(id: number, updateMessageDto: UpdateMessageDto): Promise<Message> {
-    const message = await this.findOne(id); // Проверяем существование сообщения
-    Object.assign(message, updateMessageDto); // Обновляем поля
-    return this.messagesRepository.save(message);
-  }
-
-  // Удаление сообщения по ID
-  async remove(id: number): Promise<void> {
-    const result = await this.messagesRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Message with ID ${id} not found`);
+  async findUserById(userId: number): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
     }
+    return user;
   }
 }
