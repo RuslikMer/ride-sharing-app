@@ -14,9 +14,15 @@ export class Message {
   @JoinColumn({ name: 'receiver_id' })
   receiver: User;
 
-  @Column('text')
-  message: string;
+  @Column({ nullable: false })
+  encryptedContent: string;
+
+  @Column({ default: false })
+  isRead: boolean;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  createdAt: Date;
+  sentAt: Date;
+
+  @Column({ nullable: true })
+  readAt: Date;
 }
