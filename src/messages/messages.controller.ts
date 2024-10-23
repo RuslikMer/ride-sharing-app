@@ -1,34 +1,30 @@
-import { Controller, Post, Body, Param, Get, Put, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, UseGuards } from '@nestjs/common';
 import { MessagesService } from './messages.service';
-import { CreateMessageDto } from './dto/create-message.dto';
-import { UpdateMessageDto } from './dto/update-message.dto';
-import { Message } from './message.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { User } from '../users/user.entity';
 
 @Controller('messages')
+@UseGuards(JwtAuthGuard)  // Чат доступен только для авторизованных пользователей
 export class MessagesController {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(private readonly messageService: MessagesService) {}
 
-  // Создание нового сообщения
-  @Post()
-  async create(@Body() createMessageDto: CreateMessageDto): Promise<Message> {
-    return this.messagesService.create(createMessageDto);
+  @Post(':receiverId')
+  async sendMessage(
+    @CurrentUser() sender: User,
+    @Param('receiverId') receiverId: number,
+    @Body('content') content: string,
+  ) {
+    console.log('Received request to send message:', { sender, receiverId, content });
+    const receiver = await this.messageService.findUserById(receiverId);
+    return this.messageService.sendMessage(sender, receiver, content);
   }
 
-  // Получение сообщения по ID
-  @Get(':id')
-  async findOne(@Param('id') id: number): Promise<Message> {
-    return this.messagesService.findOne(id);
-  }
-
-  // Обновление сообщения по ID
-  @Put(':id')
-  async update(@Param('id') id: number, @Body() updateMessageDto: UpdateMessageDto): Promise<Message> {
-    return this.messagesService.update(id, updateMessageDto);
-  }
-
-  // Удаление сообщения по ID
-  @Delete(':id')
-  async remove(@Param('id') id: number): Promise<void> {
-    return this.messagesService.remove(id);
+  @Get(':receiverId')
+  async getChatHistory(
+    @CurrentUser() user: User,
+    @Param('receiverId') receiverId: number,
+  ) {
+    return this.messageService.getChatHistory(user.id, receiverId);
   }
 }
