@@ -4,11 +4,19 @@ import { AuthGuard } from '@nestjs/passport';
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
 
+  // Переопределяем canActivate, чтобы добавить дополнительные проверки или логирование
   canActivate(context: ExecutionContext): boolean {
     console.log('Checking JWT auth...');
+    const request = context.switchToHttp().getRequest();
+    
+    // Логирование токена из запроса, если нужно
+    const token = request.headers.authorization?.split(' ')[1];
+    console.log('Received Token:', token);
+
     return super.canActivate(context) as boolean;
   }
 
+  // Переопределяем handleRequest, чтобы добавить подробное логирование ошибок
   handleRequest(err: any, user: any, info: any): any {
     if (err || !user) {
       // Логируем причину ошибки
@@ -21,7 +29,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         throw new UnauthorizedException('Invalid token');
       }
 
-      throw new UnauthorizedException();
+      // Общая ошибка для прочих случаев
+      throw new UnauthorizedException('Authentication failed');
     }
 
     // Логирование успешной аутентификации

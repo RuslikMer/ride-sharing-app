@@ -23,18 +23,24 @@ export class AuthService {
 
   async login(user: any) {
     console.log('Login user:', user);
-    console.log('JWT Secret:', process.env.JWT_SECRET);
+    
+    // Payload с данными пользователя, которые будут содержаться в JWT
     const payload = { username: user.username, sub: user.id };
     console.log('JWT_SECRET during token creation:', process.env.JWT_SECRET);
+
+    // Подпишем и вернем токен, добавив время жизни токена (например, 30 дней)
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.jwtService.sign(payload, {
+        secret: process.env.JWT_SECRET,
+        expiresIn: '30d', // срок действия токена
+      }),
     };
   }
   
   async register(createUserDto: CreateUserDto): Promise<User> {
     console.log('DTO received:', createUserDto);
   
-    const { username, email, password} = createUserDto;
+    const { username, email, password } = createUserDto;
   
     const hashedPassword = await bcrypt.hash(password, 10);
     console.log('Password hashed successfully');
@@ -50,6 +56,18 @@ export class AuthService {
     } catch (error) {
       console.error('Error in AuthService register:', error);
       throw error;
+    }
+  }
+
+  // Метод для верификации токена (для защиты маршрутов)
+  async verifyToken(token: string): Promise<any> {
+    try {
+      const decoded = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_SECRET,
+      });
+      return decoded;
+    } catch (error) {
+      throw new UnauthorizedException('Invalid token');
     }
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Injectable()
@@ -7,11 +7,12 @@ export class LocalAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const user = await this.authService.validateUser(request.body.username, request.body.password);
-    if (user) {
-      request.user = user;
-      return true;
+    const { email, password } = request.body; // Используем email вместо username
+    const user = await this.authService.validateUser(email, password);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials'); // Выбрасываем ошибку, если пользователь не найден
     }
-    return false;
+    request.user = user;
+    return true; // Позволяет продолжить выполнение, если аутентификация прошла успешно
   }
 }
